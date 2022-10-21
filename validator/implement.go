@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/Pangjiping/goutils/utils"
-	"github.com/Pangjiping/goutils/zmap"
 	"strings"
 	"sync"
 )
@@ -64,13 +63,13 @@ func (validator *concurrentValidatorImpl) AddValidator(validatorName string, fn 
 }
 
 type serializedValidatorImpl struct {
-	validatorMap *zmap.ZMap
+	validatorMap *linked_map.ZMap
 	ctx          context.Context
 }
 
 func newSerializedValidator(ctx context.Context) Validator {
 	return &serializedValidatorImpl{
-		validatorMap: zmap.NewZMap(),
+		validatorMap: linked_map.NewZMap(),
 		ctx:          ctx,
 	}
 }

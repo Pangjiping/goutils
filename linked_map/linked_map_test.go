@@ -1,4 +1,4 @@
-package zmap
+package linked_map
 
 import (
 	"encoding/json"
@@ -10,53 +10,53 @@ import (
 )
 
 func TestNewOrderedMap(t *testing.T) {
-	m := NewZMap()
-	assert.IsType(t, &ZMap{}, m)
+	m := NewLinkedMap()
+	assert.IsType(t, &LinkedMap{}, m)
 }
 
 func TestGet(t *testing.T) {
 	t.Run("ReturnsNotOKIfStringKeyDoesntExist", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		_, ok := m.Get("foo")
 		assert.False(t, ok)
 	})
 
 	t.Run("ReturnsNotOKIfNonStringKeyDoesntExist", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		_, ok := m.Get(123)
 		assert.False(t, ok)
 	})
 
 	t.Run("ReturnsOKIfKeyExists", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", "bar")
 		_, ok := m.Get("foo")
 		assert.True(t, ok)
 	})
 
 	t.Run("ReturnsValueForKey", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", "bar")
 		value, _ := m.Get("foo")
 		assert.Equal(t, "bar", value)
 	})
 
 	t.Run("ReturnsDynamicValueForKey", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", "baz")
 		value, _ := m.Get("foo")
 		assert.Equal(t, "baz", value)
 	})
 
 	t.Run("KeyDoesntExistOnNonEmptyMap", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", "baz")
 		_, ok := m.Get("bar")
 		assert.False(t, ok)
 	})
 
 	t.Run("ValueForKeyDoesntExistOnNonEmptyMap", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", "baz")
 		value, _ := m.Get("bar")
 		assert.Nil(t, value)
@@ -82,32 +82,32 @@ func TestGet(t *testing.T) {
 
 func TestSet(t *testing.T) {
 	t.Run("ReturnsTrueIfStringKeyIsNew", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		ok := m.Set("foo", "bar")
 		assert.True(t, ok)
 	})
 
 	t.Run("ReturnsTrueIfNonStringKeyIsNew", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		ok := m.Set(123, "bar")
 		assert.True(t, ok)
 	})
 
 	t.Run("ValueCanBeNonString", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		ok := m.Set(123, true)
 		assert.True(t, ok)
 	})
 
 	t.Run("ReturnsFalseIfKeyIsNotNew", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", "bar")
 		ok := m.Set("foo", "bar")
 		assert.False(t, ok)
 	})
 
 	t.Run("SetThreeDifferentKeys", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", "bar")
 		m.Set("baz", "qux")
 		ok := m.Set("quux", "corge")
@@ -135,18 +135,18 @@ func TestSet(t *testing.T) {
 
 func TestLen(t *testing.T) {
 	t.Run("EmptyMapIsZeroLen", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		assert.Equal(t, 0, m.Len())
 	})
 
 	t.Run("SingleElementIsLenOne", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set(123, true)
 		assert.Equal(t, 1, m.Len())
 	})
 
 	t.Run("ThreeElements", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set(1, true)
 		m.Set(2, true)
 		m.Set(3, true)
@@ -173,18 +173,18 @@ func TestLen(t *testing.T) {
 
 func TestKeys(t *testing.T) {
 	t.Run("EmptyMap", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		assert.Empty(t, m.Keys())
 	})
 
 	t.Run("OneElement", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set(1, true)
 		assert.Equal(t, []interface{}{1}, m.Keys())
 	})
 
 	t.Run("RetainsOrder", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		for i := 1; i < 10; i++ {
 			m.Set(i, true)
 		}
@@ -194,7 +194,7 @@ func TestKeys(t *testing.T) {
 	})
 
 	t.Run("ReplacingKeyDoesntChangeOrder", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", true)
 		m.Set("bar", true)
 		m.Set("foo", false)
@@ -204,7 +204,7 @@ func TestKeys(t *testing.T) {
 	})
 
 	t.Run("KeysAfterDelete", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", true)
 		m.Set("bar", true)
 		m.Delete("foo")
@@ -232,18 +232,18 @@ func TestKeys(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	t.Run("KeyDoesntExistReturnsFalse", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		assert.False(t, m.Delete("foo"))
 	})
 
 	t.Run("KeyDoesExist", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", nil)
 		assert.True(t, m.Delete("foo"))
 	})
 
 	t.Run("KeyNoLongerExists", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", nil)
 		m.Delete("foo")
 		_, exists := m.Get("foo")
@@ -251,7 +251,7 @@ func TestDelete(t *testing.T) {
 	})
 
 	t.Run("KeyDeleteIsIsolated", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", nil)
 		m.Set("bar", nil)
 		m.Delete("foo")
@@ -280,12 +280,12 @@ func TestDelete(t *testing.T) {
 
 func TestOrderedMap_Front(t *testing.T) {
 	t.Run("NilOnEmptyMap", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		assert.Nil(t, m.Front())
 	})
 
 	t.Run("NilOnEmptyMap", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set(1, true)
 		assert.NotNil(t, m.Front())
 	})
@@ -293,12 +293,12 @@ func TestOrderedMap_Front(t *testing.T) {
 
 func TestOrderedMap_Back(t *testing.T) {
 	t.Run("NilOnEmptyMap", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		assert.Nil(t, m.Back())
 	})
 
 	t.Run("NilOnEmptyMap", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set(1, true)
 		assert.NotNil(t, m.Back())
 	})
@@ -307,7 +307,7 @@ func TestOrderedMap_Back(t *testing.T) {
 func TestOrderedMap_Copy(t *testing.T) {
 	t.Run("ReturnsEqualButNotSame", func(t *testing.T) {
 		key, value := 1, "a value"
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set(key, value)
 
 		m2 := m.Copy()
@@ -320,7 +320,7 @@ func TestOrderedMap_Copy(t *testing.T) {
 
 func TestGetElement(t *testing.T) {
 	t.Run("ReturnsElementForKey", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", "bar")
 
 		var results []interface{}
@@ -333,7 +333,7 @@ func TestGetElement(t *testing.T) {
 	})
 
 	t.Run("ElementForKeyDoesntExistOnNonEmptyMap", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("foo", "baz")
 		element := m.GetElement("bar")
 		assert.Nil(t, element)
@@ -372,7 +372,7 @@ func BenchmarkMap_Set(b *testing.B) {
 
 func benchmarkOrderedMap_Set(multiplier int) func(b *testing.B) {
 	return func(b *testing.B) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		for i := 0; i < b.N*multiplier; i++ {
 			m.Set(i, true)
 		}
@@ -401,7 +401,7 @@ func BenchmarkMap_Get(b *testing.B) {
 }
 
 func benchmarkOrderedMap_Get(multiplier int) func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	for i := 0; i < 1000*multiplier; i++ {
 		m.Set(i, true)
 	}
@@ -418,7 +418,7 @@ func BenchmarkOrderedMap_Get(b *testing.B) {
 }
 
 func benchmarkOrderedMap_GetElement(multiplier int) func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	for i := 0; i < 1000*multiplier; i++ {
 		m.Set(i, true)
 	}
@@ -437,7 +437,7 @@ func BenchmarkOrderedMap_GetElement(b *testing.B) {
 var tempInt int
 
 func benchmarkOrderedMap_Len(multiplier int) func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	for i := 0; i < 1000*multiplier; i++ {
 		m.Set(i, true)
 	}
@@ -476,7 +476,7 @@ func BenchmarkMap_Delete(b *testing.B) {
 
 func benchmarkOrderedMap_Delete(multiplier int) func(b *testing.B) {
 	return func(b *testing.B) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		for i := 0; i < b.N*multiplier; i++ {
 			m.Set(i, true)
 		}
@@ -509,7 +509,7 @@ func BenchmarkMap_Iterate(b *testing.B) {
 }
 
 func benchmarkOrderedMap_Iterate(multiplier int) func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	for i := 0; i < 1000*multiplier; i++ {
 		m.Set(i, true)
 	}
@@ -529,7 +529,7 @@ func BenchmarkOrderedMap_Iterate(b *testing.B) {
 }
 
 func benchmarkOrderedMap_Keys(multiplier int) func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	for i := 0; i < 1000*multiplier; i++ {
 		m.Set(i, true)
 	}
@@ -557,7 +557,7 @@ func BenchmarkMapString_Set(b *testing.B) {
 
 func benchmarkOrderedMapString_Set(multiplier int) func(b *testing.B) {
 	return func(b *testing.B) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		a := "12345678"
 		for i := 0; i < b.N*multiplier; i++ {
 			m.Set(a+strconv.Itoa(i), true)
@@ -588,7 +588,7 @@ func BenchmarkMapString_Get(b *testing.B) {
 }
 
 func benchmarkOrderedMapString_Get(multiplier int) func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	a := "12345678"
 	for i := 0; i < 1000*multiplier; i++ {
 		m.Set(a+strconv.Itoa(i), true)
@@ -606,7 +606,7 @@ func BenchmarkOrderedMapString_Get(b *testing.B) {
 }
 
 func benchmarkOrderedMapString_GetElement(multiplier int) func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	a := "12345678"
 	for i := 0; i < 1000*multiplier; i++ {
 		m.Set(a+strconv.Itoa(i), true)
@@ -643,7 +643,7 @@ func BenchmarkMapString_Delete(b *testing.B) {
 
 func benchmarkOrderedMapString_Delete(multiplier int) func(b *testing.B) {
 	return func(b *testing.B) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		a := "12345678"
 		for i := 0; i < b.N*multiplier; i++ {
 			m.Set(a+strconv.Itoa(i), true)
@@ -678,7 +678,7 @@ func BenchmarkMapString_Iterate(b *testing.B) {
 }
 
 func benchmarkOrderedMapString_Iterate(multiplier int) func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	a := "12345678"
 	for i := 0; i < 1000*multiplier; i++ {
 		m.Set(a+strconv.Itoa(i), true)
@@ -703,7 +703,7 @@ func BenchmarkOrderedMap_Keys(b *testing.B) {
 }
 
 func ExampleNewOrderedMap() {
-	m := NewZMap()
+	m := NewLinkedMap()
 
 	m.Set("foo", "bar")
 	m.Set("qux", 1.23)
@@ -718,7 +718,7 @@ func ExampleNewOrderedMap() {
 }
 
 func ExampleOrderedMap_Front() {
-	m := NewZMap()
+	m := NewLinkedMap()
 	m.Set(1, true)
 	m.Set(2, true)
 
@@ -749,7 +749,7 @@ func BenchmarkBigMap_Set(b *testing.B) {
 func benchmarkBigOrderedMap_Set() func(b *testing.B) {
 	return func(b *testing.B) {
 		for j := 0; j < b.N; j++ {
-			m := NewZMap()
+			m := NewLinkedMap()
 			for i := 0; i < 10000000; i++ {
 				m.Set(i, true)
 			}
@@ -781,7 +781,7 @@ func BenchmarkBigMap_Get(b *testing.B) {
 }
 
 func benchmarkBigOrderedMap_Get() func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	for i := 0; i < 10000000; i++ {
 		m.Set(i, true)
 	}
@@ -800,7 +800,7 @@ func BenchmarkBigOrderedMap_Get(b *testing.B) {
 }
 
 func benchmarkBigOrderedMap_GetElement() func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	for i := 0; i < 10000000; i++ {
 		m.Set(i, true)
 	}
@@ -836,7 +836,7 @@ func BenchmarkBigMap_Iterate(b *testing.B) {
 }
 
 func benchmarkBigOrderedMap_Iterate() func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	for i := 0; i < 10000000; i++ {
 		m.Set(i, true)
 	}
@@ -874,7 +874,7 @@ func BenchmarkBigMapString_Set(b *testing.B) {
 func benchmarkBigOrderedMapString_Set() func(b *testing.B) {
 	return func(b *testing.B) {
 		for j := 0; j < b.N; j++ {
-			m := NewZMap()
+			m := NewLinkedMap()
 			a := "1234567"
 			for i := 0; i < 10000000; i++ {
 				m.Set(a+strconv.Itoa(i), true)
@@ -908,7 +908,7 @@ func BenchmarkBigMapString_Get(b *testing.B) {
 }
 
 func benchmarkBigOrderedMapString_Get() func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	a := "1234567"
 	for i := 0; i < 10000000; i++ {
 		m.Set(a+strconv.Itoa(i), true)
@@ -928,7 +928,7 @@ func BenchmarkBigOrderedMapString_Get(b *testing.B) {
 }
 
 func benchmarkBigOrderedMapString_GetElement() func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	a := "1234567"
 	for i := 0; i < 10000000; i++ {
 		m.Set(a+strconv.Itoa(i), true)
@@ -966,7 +966,7 @@ func BenchmarkBigMapString_Iterate(b *testing.B) {
 }
 
 func benchmarkBigOrderedMapString_Iterate() func(b *testing.B) {
-	m := NewZMap()
+	m := NewLinkedMap()
 	a := "12345678"
 	for i := 0; i < 10000000; i++ {
 		m.Set(a+strconv.Itoa(i), true)
@@ -1028,7 +1028,7 @@ func BenchmarkAll(b *testing.B) {
 
 func TestOrderedMapJSON(t *testing.T) {
 	t.Run("EmptyMap", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		json, err := json.Marshal(m)
 
 		if err != nil {
@@ -1038,7 +1038,7 @@ func TestOrderedMapJSON(t *testing.T) {
 	})
 
 	t.Run("InvalidJSON", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set(1, struct{ Foo string }{"bar"})
 
 		_, err := json.Marshal(m)
@@ -1048,7 +1048,7 @@ func TestOrderedMapJSON(t *testing.T) {
 	})
 
 	t.Run("MarshalJSON", func(t *testing.T) {
-		m := NewZMap()
+		m := NewLinkedMap()
 		m.Set("string", "foo")
 		m.Set("number", 1337)
 		m.Set("slice", []string{"foo", "bar"})
@@ -1059,7 +1059,7 @@ func TestOrderedMapJSON(t *testing.T) {
 			Foo string `json:"foo_tag"`
 		}{"bar"})
 
-		m2 := NewZMap()
+		m2 := NewLinkedMap()
 		m2.Set("string", "foo")
 		m2.Set("number", 1337)
 		m2.Set("slice", []string{"foo", "bar"})
