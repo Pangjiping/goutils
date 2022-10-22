@@ -28,161 +28,168 @@ func newRaxNode() *raxNode {
 	}
 }
 
-func (this *raxNode) pathSplit(key []byte, key_pos int, val interface{}) (int, *raxNode) {
-	//与path对应的key数据(去掉已经处理的公共字节)
-	data := key[key_pos/8:]
-	//key以bit为单位长度（包含开始字节的字节内bit位的偏移量）
-	bit_end_key := len(data) * 8
-	//path以bit为单位长度（包含开始字节的字节内bit位的偏移量）
-	bit_end_path := key_pos%8 + int(this.bitLen)
-	//当前的bit偏移量，需要越过开始字节的字节内bit位的偏移量
-	bpos := key_pos % 8
-	for bpos < bit_end_key && bpos < bit_end_path {
-		ci := bpos / 8
-		byte_path := this.bitVal[ci]
-		byte_data := data[ci]
+// pathSplit performs path splitting when inserting data.
+func (radixNode *raxNode) pathSplit(key []byte, keyPos int, val interface{}) (int, *raxNode) {
+	// the key data corresponding to the path
+	// (remove the processed common bytes)
+	data := key[keyPos/8:]
 
-		//起始字节的内部偏移量
+	// the length of the key in bits
+	// (the offset of the bit in the byte containing the start byte)
+	bitEndKey := len(data) * 8
+
+	// path length in bits
+	// (bit offset within the byte containing the start byte)
+	bitEndPath := keyPos%8 + int(radixNode.bitLen)
+
+	// the current bit offset, the offset of the bit in the byte that needs to go beyond the start byte
+	bpos := keyPos % 8
+	for bpos < bitEndKey && bpos < bitEndPath {
+		ci := bpos / 8
+		bytePath := radixNode.bitVal[ci]
+		byteData := data[ci]
+
+		// internal offset of start byte
 		beg := 0
 		if ci == 0 {
-			beg = key_pos % 8
+			beg = keyPos % 8
 		}
-		//终止字节的内部偏移量
+		// internal offset of the termination byte
 		end := 8
-		if ci == bit_end_path/8 {
-			end = bit_end_path % 8
+		if ci == bitEndPath/8 {
+			end = bitEndPath % 8
 			if end == 0 {
 				end = 8
 			}
 		}
 
 		if beg != 0 || end != 8 {
-			//不完整字节的比较，若不等则跳出循环
-			//若相等，则增长bpos，并继续比较下一个字节
-			num := GetPrefixBitLength2(byte_data, byte_path, beg, end)
+			// comparison of incomplete bytes, if not equal, jump out of the loop;
+			// if equal, increment bpos and continue to compare the next byte.
+			num := GetPrefixBitLength2(byteData, bytePath, beg, end)
 			bpos += num
 			if num < end-beg {
 				break
 			}
-		} else if byte_data != byte_path {
-			//完整字节比较，num为相同的bit的个数，bpos增加num后跳出循环
-			num := GetPrefixBitLength2(byte_data, byte_path, 0, 8)
+		} else if byteData != bytePath {
+			// complete byte comparison, num is the same number of bits, bpos increases num and jumps out of the loop.
+			num := GetPrefixBitLength2(byteData, bytePath, 0, 8)
 			bpos += num
 			break
 		} else {
-			//完整字节比较，相等，则继续比较下一个字节
+			// complete byte comparison, if equal, continue to compare the next byte
 			bpos += 8
 		}
 	}
 
-	//当前字节的位置
-	char_index := bpos / 8
-	//当前字节的bit偏移量
-	bit_offset := bpos % 8
-	//剩余的path长度
-	bit_last_path := bit_end_path - bpos
-	//剩余的key长度
-	bit_last_data := bit_end_key - bpos
+	// current byte position
+	charIndex := bpos / 8
+	// bit offset of the current byte
+	bitOffset := bpos % 8
+	// remaining path length
+	bitLastPath := bitEndPath - bpos
+	// remaining key length
+	bitLastData := bitEndKey - bpos
 
-	//key的数据有剩余
-	//若path有子结点，则继续处理子结点
-	//若path没有子结点，则创建一个key子结点
+	// the data of the key is left over.
+	// If path has child nodes, continue processing child nodes;
+	// If path has no child nodes, create a key child node.
 	var nd_data *raxNode = nil
 	var bval_data byte
-	if bit_last_data > 0 {
-		//若path有子结点，则退出本函数，并在子结点中进行处理
-		byte_data := data[char_index]
-		bval_data = GET_BIT(byte_data, bit_offset)
-		if bit_last_path == 0 {
-			if bval_data == 0 && this.left != nil {
-				return key_pos + int(this.bitLen), this.left
-			} else if bval_data == 1 && this.right != nil {
-				return key_pos + int(this.bitLen), this.right
+	if bitLastData > 0 {
+		// If path has child nodes, exit this function and process in child nodes
+		byte_data := data[charIndex]
+		bval_data = GET_BIT(byte_data, bitOffset)
+		if bitLastPath == 0 {
+			if bval_data == 0 && radixNode.left != nil {
+				return keyPos + int(radixNode.bitLen), radixNode.left
+			} else if bval_data == 1 && radixNode.right != nil {
+				return keyPos + int(radixNode.bitLen), radixNode.right
 			}
 		}
 
-		//为剩余的key创建子结点
+		// Create child nodes for the remaining keys
 		nd_data = newRaxNode()
 		nd_data.left = nil
 		nd_data.right = nil
 		nd_data.val = val
-		nd_data.bitLen = bit_last_data
-		nd_data.bitVal = make([]byte, len(data[char_index:]))
-		copy(nd_data.bitVal, data[char_index:])
+		nd_data.bitLen = bitLastData
+		nd_data.bitVal = make([]byte, len(data[charIndex:]))
+		copy(nd_data.bitVal, data[charIndex:])
 
-		//若bit_offset!=0，说明不是完整字节，
-		//将字节分裂，并将字节中的非公共部分分离出来,保存到子结点中
-		if bit_offset != 0 {
-			byte_tmp := CLEAR_BITS_LOW(byte_data, bit_offset)
+		// If bit_offset!=0, it means not a complete byte
+		// Split the bytes, separate the non-common parts of the bytes, and save them to the child nodes
+		if bitOffset != 0 {
+			byte_tmp := CLEAR_BITS_LOW(byte_data, bitOffset)
 			nd_data.bitVal[0] = byte_tmp
 		}
 	}
 
-	//path的数据有剩余
-	//创建子节点：nd_path结点
-	//并将数据分开，公共部分保存this结点，其他保存到nd_path结点
+	// The data of path has remaining
+	// Create child nodes: nd_path node
+	// And separate the data, save the common part to the radixNode node, and save the other to the nd_path node
 	var nd_path *raxNode = nil
 	var bval_path byte
-	if bit_last_path > 0 {
-		byte_path := this.bitVal[char_index]
-		bval_path = GET_BIT(byte_path, bit_offset)
+	if bitLastPath > 0 {
+		byte_path := radixNode.bitVal[charIndex]
+		bval_path = GET_BIT(byte_path, bitOffset)
 
 		//为剩余的path创建子结点
 		nd_path = newRaxNode()
-		nd_path.left = this.left
-		nd_path.right = this.right
-		nd_path.val = this.val
-		nd_path.bitLen = bit_last_path
-		nd_path.bitVal = make([]byte, len(this.bitVal[char_index:]))
-		copy(nd_path.bitVal, this.bitVal[char_index:])
+		nd_path.left = radixNode.left
+		nd_path.right = radixNode.right
+		nd_path.val = radixNode.val
+		nd_path.bitLen = bitLastPath
+		nd_path.bitVal = make([]byte, len(radixNode.bitVal[charIndex:]))
+		copy(nd_path.bitVal, radixNode.bitVal[charIndex:])
 
 		//将byte_path字节中的非公共部分分离出来,保存到子结点中
-		if bit_offset != 0 {
-			byte_tmp := CLEAR_BITS_LOW(byte_path, bit_offset)
+		if bitOffset != 0 {
+			byte_tmp := CLEAR_BITS_LOW(byte_path, bitOffset)
 			nd_path.bitVal[0] = byte_tmp
 		}
 
 		//修改当前结点，作为nd_path结点、nd_data结点的父结点
 		//多申请一个子节，用于存储可能出现的不完整字节
-		bit_val_old := this.bitVal
-		this.left = nil
-		this.right = nil
-		this.val = nil
-		this.bitLen = this.bitLen - bit_last_path //=bpos - (key_pos % 8)
-		this.bitVal = make([]byte, len(bit_val_old[0:char_index])+1)
-		copy(this.bitVal, bit_val_old[0:char_index])
-		this.bitVal = this.bitVal[0 : len(this.bitVal)-1]
+		bit_val_old := radixNode.bitVal
+		radixNode.left = nil
+		radixNode.right = nil
+		radixNode.val = nil
+		radixNode.bitLen = radixNode.bitLen - bitLastPath // = bpos - (key_pos % 8)
+		radixNode.bitVal = make([]byte, len(bit_val_old[0:charIndex])+1)
+		copy(radixNode.bitVal, bit_val_old[0:charIndex])
+		radixNode.bitVal = radixNode.bitVal[0 : len(radixNode.bitVal)-1]
 
 		//将byte_path字节中的公共部分分离出来,保存到父结点
-		if bit_offset != 0 {
-			byte_tmp := CLEAR_BITS_HIGH(byte_path, 8-bit_offset)
-			this.bitVal = append(this.bitVal, byte_tmp)
+		if bitOffset != 0 {
+			byte_tmp := CLEAR_BITS_HIGH(byte_path, 8-bitOffset)
+			radixNode.bitVal = append(radixNode.bitVal, byte_tmp)
 		}
 	}
 
-	//若path包含key，则将val赋值给this结点
-	if bit_last_data == 0 {
-		this.val = val
+	//若path包含key，则将val赋值给radixNode结点
+	if bitLastData == 0 {
+		radixNode.val = val
 	}
 	if nd_data != nil {
 		if bval_data == 0 {
-			this.left = nd_data
+			radixNode.left = nd_data
 		} else {
-			this.right = nd_data
+			radixNode.right = nd_data
 		}
 	}
 	if nd_path != nil {
 		if bval_path == 0 {
-			this.left = nd_path
+			radixNode.left = nd_path
 		} else {
-			this.right = nd_path
+			radixNode.right = nd_path
 		}
 	}
 	return len(key) * 8, nil
 }
 
-func (this *raxNode) pathCompare(data []byte, bbeg int) (bool, int) {
-	bend := bbeg + int(this.bitLen)
+func (radixNode *raxNode) pathCompare(data []byte, bbeg int) (bool, int) {
+	bend := bbeg + int(radixNode.bitLen)
 	if bend > len(data)*8 {
 		return false, len(data) * 8
 	}
@@ -213,7 +220,7 @@ func (this *raxNode) pathCompare(data []byte, bbeg int) (bool, int) {
 		}
 
 		//获取结点的当前字节，并与数据的当前字节比较
-		byte_node := this.bitVal[nci]
+		byte_node := radixNode.bitVal[nci]
 		if byte_data != byte_node {
 			return false, len(data) * 8
 		}
@@ -226,53 +233,53 @@ func (this *raxNode) pathCompare(data []byte, bbeg int) (bool, int) {
 
 //将当前结点的子结点进行合并
 //若当前结点只有一个子结点，并且当前结点是空结点，才可以进行合并操作
-func (this *raxNode) pathMerge(bpos int) bool {
+func (radixNode *raxNode) pathMerge(bpos int) bool {
 	//若当前结点存在值，则不能合并
-	if this.val != nil {
+	if radixNode.val != nil {
 		return false
 	}
 
 	//若当前结点有2个子结点，则不能合并
-	if this.left != nil && this.right != nil {
+	if radixNode.left != nil && radixNode.right != nil {
 		return false
 	}
 
 	//若当前结点没有子结点，则不能合并
-	if this.left != nil && this.right != nil {
+	if radixNode.left != nil && radixNode.right != nil {
 		return false
 	}
 
 	//获取当前结点的子结点
-	child := this.left
-	if this.right != nil {
-		child = this.right
+	child := radixNode.left
+	if radixNode.right != nil {
+		child = radixNode.right
 	}
 
 	//判断当前结点最后一个字节是否是完整的字节
 	//若不是完整字节，需要与子结点的第一个字节进行合并
 	if bpos%8 != 0 {
-		char_len := len(this.bitVal)
-		char_last := this.bitVal[char_len-1]
+		char_len := len(radixNode.bitVal)
+		char_last := radixNode.bitVal[char_len-1]
 		char_0000 := child.bitVal[0]
 		child.bitVal = child.bitVal[1:]
-		this.bitVal[char_len-1] = char_last | char_0000
+		radixNode.bitVal[char_len-1] = char_last | char_0000
 	}
 
 	//合并当前结点以及子结点
-	this.val = child.val
-	this.bitVal = append(this.bitVal, child.bitVal...)
-	this.bitLen += child.bitLen
-	this.left = child.left
-	this.right = child.right
+	radixNode.val = child.val
+	radixNode.bitVal = append(radixNode.bitVal, child.bitVal...)
+	radixNode.bitLen += child.bitLen
+	radixNode.left = child.left
+	radixNode.right = child.right
 
 	return true
 }
 
 ////打印结点信息，用于调试
-func (this *raxNode) GetNodeInfo(bbeg int) string {
+func (radixNode *raxNode) getNodeInfo(bbeg int) string {
 	buff := new(bytes.Buffer)
 
-	bend := bbeg + int(this.bitLen)
+	bend := bbeg + int(radixNode.bitLen)
 	//起始和终止字节的位置
 	cbeg := bbeg / 8
 	cend := bend / 8
@@ -283,7 +290,7 @@ func (this *raxNode) GetNodeInfo(bbeg int) string {
 		//获取两个数组的当前字节位置
 		dci := bb / 8
 		nci := dci - cbeg
-		byte_node := this.bitVal[nci]
+		byte_node := radixNode.bitVal[nci]
 
 		//获取数据的当前字节以及循环步长
 		step := 8
@@ -294,7 +301,7 @@ func (this *raxNode) GetNodeInfo(bbeg int) string {
 			step = oend
 		}
 		if cbeg == cend {
-			step = int(this.bitLen)
+			step = int(radixNode.bitLen)
 		}
 
 		if step != 8 {
@@ -305,8 +312,8 @@ func (this *raxNode) GetNodeInfo(bbeg int) string {
 		bb += step
 	}
 
-	if this.val != nil {
-		buff.WriteString(fmt.Sprintf("=%v", this.val))
+	if radixNode.val != nil {
+		buff.WriteString(fmt.Sprintf("=%v", radixNode.val))
 	}
 
 	return buff.String()

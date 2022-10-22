@@ -2,6 +2,7 @@ package radix
 
 import (
 	"encoding/json"
+	"github.com/Pangjiping/goutils/utils"
 )
 
 type Radix struct {
@@ -70,7 +71,7 @@ func (this *Radix) Get(key string) interface{} {
 //只能删除叶子结点，不能删除根节点
 //删除叶子结点后，若parent结点只有一个子结点，则将parent结点与子结点合并
 func (this *Radix) Delete(key string) {
-	data := []byte(key)
+	data := utils.String2Bytes(key)
 	blen := len(data) * 8
 	cur := this.root[data[0]]
 
@@ -174,7 +175,7 @@ func (this *Radix) GetItems() []stringKV {
 
 //递归打印结点信息，用于调试
 func (this *Radix) getNodesInfo(cur *raxNode, pos int, data map[string]interface{}) {
-	data["info"] = cur.GetNodeInfo(pos)
+	data["info"] = cur.getNodeInfo(pos)
 	pos += int(cur.bitLen)
 
 	if cur.left != nil {
