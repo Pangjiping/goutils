@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"fmt"
+	"github.com/Pangjiping/goutils/linked_map"
 	"github.com/Pangjiping/goutils/utils"
 	"strings"
 	"sync"
@@ -63,13 +64,13 @@ func (validator *concurrentValidatorImpl) AddValidator(validatorName string, fn 
 }
 
 type serializedValidatorImpl struct {
-	validatorMap *linked_map.ZMap
+	validatorMap *linked_map.LinkedMap
 	ctx          context.Context
 }
 
 func newSerializedValidator(ctx context.Context) Validator {
 	return &serializedValidatorImpl{
-		validatorMap: linked_map.NewZMap(),
+		validatorMap: linked_map.NewLinkedMap(),
 		ctx:          ctx,
 	}
 }
